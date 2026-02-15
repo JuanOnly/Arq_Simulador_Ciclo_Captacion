@@ -5,6 +5,10 @@
 package com.styles.main;
 
 import com.formdev.flatlaf.intellijthemes.FlatArcDarkIJTheme;
+import controlador.ctrlProcesador;
+import controlador.ctrlMemoria;
+import controlador.ctrlBus;
+import controlador.ctrlALU;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import java.util.logging.Level;
@@ -22,10 +26,17 @@ public class main extends javax.swing.JFrame {
     String inst1 = "instr 1";
     String inst2 = "instr 2";
 
+    private ctrlProcesador ctrlProcesador;
+    private ctrlMemoria ctrlMemoria;
+    private ctrlBus ctrlBus;
+    private ctrlALU ctrlALU;
+
     public main() {
-
         initComponents();
-
+        ctrlProcesador = new ctrlProcesador();
+        ctrlMemoria = new ctrlMemoria();
+        ctrlBus = new ctrlBus();
+        ctrlALU = new ctrlALU();
     }
 
     public String obtenerCodop(String inst) {
@@ -54,254 +65,179 @@ public class main extends javax.swing.JFrame {
                 i > 9 & i < 16; i++) {
             String c = String.valueOf(dir.charAt(i));
             inst2 += c;
-            //inst2.concat(c); 
         }
         return inst2;
 
     }
 
-    public void exeResultado(int opcion) {
-        switch (opcion) {
-            case 0000: //move
+    private boolean isValidBinary(String input) {
+        if (input == null || input.isEmpty()) {
+            return false;
+        }
+        return input.matches("[01]+");
+    }
+
+    public void exeResultado(String codopStr) {
+        switch (codopStr) {
+            case "0000": //move
                 jTFResultado.setText(inst1 + "->" + inst2);
                 JOptionPane.showMessageDialog(null, "La dirección " + inst1 + " se ha movido a la direción " + inst2, "Pantalla", 1);
                 jTFmemoria.setText("[" + inst2 + "]: " + inst1);
                 break;
 
-            case 0001: //clear
+            case "0001": //clear
                 jTFResultado.setText(inst1 + "&" + inst2 + "=0 ");
                 JOptionPane.showMessageDialog(null, "Las direcciones " + inst1 + " y " + inst2 + " se han reemplazado por palabras 0 ", "Pantalla", 1);
                 String clear = "";
                 clear += "[" + inst1 + "]: 000000\n";
-
                 clear += "[" + inst2 + "]: 000000\n";
-
                 jTFmemoria.setText(clear);
                 break;
 
-            case 10: //set
+            case "0010": //set
                 jTFResultado.setText(inst1 + "&" + inst2 + "=1 ");
                 JOptionPane.showMessageDialog(null, "Las direcciones " + inst1 + " y " + inst2 + " se han reemplazado por palabras 1 ", "Pantalla", 1);
                 String set = "";
-                set += "[" + inst1 + "]: 111111\n" + "";
+                set += "[" + inst1 + "]: 111111\n";
                 set += "[" + inst2 + "]: 111111\n";
                 jTFmemoria.setText(set);
                 break;
 
-            case 11: //store
+            case "0011": //store
                 jTFResultado.setText(inst1 + "&" + inst2);
                 JOptionPane.showMessageDialog(null, "Las direcciones " + inst1 + " y " + inst2 + " se ha movido a la memoria ", "Pantalla", 1);
                 jTFmemoria.setText("[" + inst2 + "]: " + inst1);
                 break;
 
-            case 100: //add
-
-                String input0 = inst1;
-                String input1 = inst2;
-
-                int number0 = Integer.parseInt(input0, 2);
-                int number1 = Integer.parseInt(input1, 2);
-
-                int sum = number0 + number1;
-                String resultado = Integer.toBinaryString(sum);
-                jTFResultado.setText(String.valueOf(resultado));
-                JOptionPane.showMessageDialog(null, "El resultado de la suma es: \n" + String.valueOf(resultado), "Pantalla", 1);
-                break;
-
-            case 101: //sub
-
-                String nst = "",
-                 max = "";
-                char b = '0';
-                boolean tf = (inst1.length() >= inst2.length());
-                int l1 = inst1.length(),
-                 l2 = inst2.length();
-                if (l1 < l2) {
-                    for (int a = 1; a <= l2 - l1; a++) {
-                        inst1 = '0' + inst1;
-                    }
-                } else if (l2 < l1) {
-                    for (int a = 1; a <= l1 - l2; a++) {
-                        inst2 = "0" + inst2;
-                    }
+            case "0100": //add
+                try {
+                    int number0 = Integer.parseInt(inst1, 2);
+                    int number1 = Integer.parseInt(inst2, 2);
+                    int sum = number0 + number1;
+                    String resultado = String.format("%6s", Integer.toBinaryString(sum)).replace(' ', '0');
+                    jTFResultado.setText(resultado);
+                    JOptionPane.showMessageDialog(null, "El resultado de la suma es: \n" + resultado, "Pantalla", 1);
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Error: Valores binarios inválidos", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-                if (!tf) {
-                    for (int a = l1 - 1; a >= 0; a--) {
-                        if (inst1.charAt(a) != inst2.charAt(a)) {
-                            if (inst2.charAt(a) == '1') {
-                                max = inst2;
-                                inst2 = inst1;
-                                inst1 = max;
-                                break;
-                            }
-                        }
-                    }
+                break;
+
+            case "0101": //sub
+                try {
+                    String paddedInst1 = inst1;
+                    String paddedInst2 = inst2;
+                    int maxLen = Math.max(inst1.length(), inst2.length());
+                    paddedInst1 = String.format("%" + maxLen + "s", inst1).replace(' ', '0');
+                    paddedInst2 = String.format("%" + maxLen + "s", inst2).replace(' ', '0');
+
+                    int n1 = Integer.parseInt(paddedInst1, 2);
+                    int n2 = Integer.parseInt(paddedInst2, 2);
+                    int diff = n1 - n2;
+                    String result = diff >= 0 ? String.format("%" + maxLen + "s", Integer.toBinaryString(diff)).replace(' ', '0') 
+                                              : "-" + String.format("%" + maxLen + "s", Integer.toBinaryString(-diff)).replace(' ', '0');
+                    
+                    jTFResultado.setText(result);
+                    JOptionPane.showMessageDialog(null, "El resultado de la resta es: \n" + result, "Pantalla", 1);
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Error: Valores binarios inválidos", "Error", JOptionPane.ERROR_MESSAGE);
                 }
+                break;
 
-                for (int a = inst1.length() - 1; a >= 0; a--) {
-                    if (inst1.charAt(a) == '1' && inst2.charAt(a) == '0') {
-                        if (b == '1') {
-                            nst = '0' + nst;
-                            b = '0';
-                        } else {
-                            nst = '1' + nst;
-                        }
-                    } else if (inst1.charAt(a) == inst2.charAt(a) && inst2.charAt(a) == '1') {
-                        if (b == '1') {
-                            nst = '1' + nst;
-                            b = '1';
-                        } else {
-                            nst = '0' + nst;
-                        }
-                    } else if (inst1.charAt(a) == '0' && inst2.charAt(a) == '1') {
-                        if (b == '1') {
-                            nst = '0' + nst;
-                        } else {
-                            nst = '1' + nst;
-                            b = '1';
-                        }
-                    } else {
-                        if (b == '1') {
-                            nst = '1' + nst;
-                        } else {
-                            nst = '0' + nst;
-                        }
-                    }
+            case "0110": //mpy              
+                try {
+                    int prim = Integer.parseInt(inst1, 2);
+                    int sec = Integer.parseInt(inst2, 2);
+                    int r = prim * sec;
+                    String rBin = Integer.toBinaryString(r);
+                    jTFResultado.setText(rBin);
+                    JOptionPane.showMessageDialog(null, "El resultado de la multiplicacion es: \n" + rBin, "Pantalla", 1);
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Error: Valores binarios inválidos", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-                JOptionPane.showMessageDialog(null, "El resultado de la resta es: \n" + nst, "Pantalla", 1);
-                jTFResultado.setText(nst);
-
                 break;
 
-            case 110: //mpy              
-                int prim = Integer.parseInt(inst1, 2);
-                int sec = Integer.parseInt(inst2, 2);
-
-                int r = prim * sec;
-
-                String rBin = Integer.toBinaryString(r);
-                JOptionPane.showMessageDialog(null, "El resultado de la multiplicacion es: \n" + rBin, "Pantalla", 1);
-                jTFResultado.setText(rBin);
+            case "0111": //div
+                try {
+                    int primero = Integer.parseInt(inst1, 2);
+                    int segundo = Integer.parseInt(inst2, 2);
+                    if (segundo == 0) {
+                        JOptionPane.showMessageDialog(null, "Error: División por cero", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    int div = primero / segundo;
+                    String division = Integer.toBinaryString(div);
+                    jTFResultado.setText(division);
+                    JOptionPane.showMessageDialog(null, "El resultado de la division es: \n" + division, "Pantalla", 1);
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Error: Valores binarios inválidos", "Error", JOptionPane.ERROR_MESSAGE);
+                }
                 break;
 
-            case 111:// div
-                int primero = Integer.parseInt(inst1, 2);
-                int segundo = Integer.parseInt(inst2, 2);
-
-                int div = primero / segundo;
-
-                String division = Integer.toBinaryString(div);
-                JOptionPane.showMessageDialog(null, "El resultado de la division es: \n" + division, "Pantalla", 1);
-                jTFResultado.setText(division);
-                break;
-
-            case 1000: //negate
+            case "1000": //negate
                 String negate = "";
-
                 for (int i = 0; i < inst1.length(); i++) {
-                    char n = inst1.charAt(i);
-                    if (String.valueOf(n).equals("1")) {
-                        negate += "0";
-                    }
-                    if (String.valueOf(n).equals("0")) {
-                        negate += "1";
-                    }
+                    negate += (inst1.charAt(i) == '1') ? "0" : "1";
                 }
                 negate += "-";
                 for (int i = 0; i < inst2.length(); i++) {
-                    char nn = inst2.charAt(i);
-                    if (String.valueOf(nn).equals("1")) {
-                        negate += "0";
-                    }
-                    if (String.valueOf(nn).equals("0")) {
-                        negate += "1";
-                    }
+                    negate += (inst2.charAt(i) == '1') ? "0" : "1";
                 }
                 JOptionPane.showMessageDialog(null, "Los valores negados son: \n" + negate, "Pantalla", 1);
                 jTFResultado.setText(negate);
-
                 break;
 
-            case 1001: //and
+            case "1001": //and - fixed logic
                 String and = "";
-                for (int i = 0; i < inst1.length(); i++) {
-                    for (int j = 0; j < inst2.length(); j++) {
-                        char ii = inst1.charAt(i);
-                        char jj = inst2.charAt(j);
-                        if (Character.valueOf(ii).equals(Character.valueOf(jj))) {
-                            and += 1;
-                        } else {
-                            and += 0;
-                        }
-
-                    }
+                int andLen = Math.max(inst1.length(), inst2.length());
+                String padAnd1 = String.format("%" + andLen + "s", inst1).replace(' ', '0');
+                String padAnd2 = String.format("%" + andLen + "s", inst2).replace(' ', '0');
+                for (int i = 0; i < andLen; i++) {
+                    and += (padAnd1.charAt(i) == '1' && padAnd2.charAt(i) == '1') ? "1" : "0";
                 }
                 JOptionPane.showMessageDialog(null, "La conjuncion logica da: \n" + and, "Pantalla", 1);
                 jTFResultado.setText(and);
-
                 break;
 
-            case 1010: //Or
+            case "1010": //Or - fixed logic
                 String or = "";
-                for (int i = 0; i < inst1.length(); i++) {
-                    for (int j = 0; j < inst2.length(); j++) {
-                        char ii = inst1.charAt(i);
-                        char jj = inst2.charAt(j);
-                        if (Character.valueOf(ii).equals("1") | Character.valueOf(jj).equals("1")) {
-                            or += 1;
-                        } else {
-                            or += 0;
-                        }
-
-                    }
+                int orLen = Math.max(inst1.length(), inst2.length());
+                String padOr1 = String.format("%" + orLen + "s", inst1).replace(' ', '0');
+                String padOr2 = String.format("%" + orLen + "s", inst2).replace(' ', '0');
+                for (int i = 0; i < orLen; i++) {
+                    or += (padOr1.charAt(i) == '1' || padOr2.charAt(i) == '1') ? "1" : "0";
                 }
                 jTFResultado.setText(or);
                 JOptionPane.showMessageDialog(null, "La disyuncion logica da: \n" + or, "Pantalla", 1);
                 break;
 
-            case 1011: //not 
+            case "1011": //not 
                 String not = "";
-
                 for (int i = 0; i < inst1.length(); i++) {
-                    char n = inst1.charAt(i);
-                    if (String.valueOf(n).equals("1")) {
-                        not += "0";
-                    }
-                    if (String.valueOf(n).equals("0")) {
-                        not += "1";
-                    }
+                    not += (inst1.charAt(i) == '1') ? "0" : "1";
                 }
                 not += "-";
                 for (int i = 0; i < inst2.length(); i++) {
-                    char nn = inst2.charAt(i);
-                    if (String.valueOf(nn).equals("1")) {
-                        not += "0";
-                    }
-                    if (String.valueOf(nn).equals("0")) {
-                        not += "1";
-                    }
+                    not += (inst2.charAt(i) == '1') ? "0" : "1";
                 }
                 JOptionPane.showMessageDialog(null, "El valor negado es: \n" + not, "Pantalla", 1);
-
                 jTFResultado.setText(not);
-
                 break;
 
-            case 1100: //compare
+            case "1100": //compare
                 String compare = "";
-
-                if (inst1.equals(inst2)) {
+                String padComp1 = String.format("%6s", inst1).replace(' ', '0');
+                String padComp2 = String.format("%6s", inst2).replace(' ', '0');
+                if (padComp1.equals(padComp2)) {
                     compare = "Números iguales";
                 } else {
-                    compare = "Numeros distintos";
+                    compare = "Números distintos";
                 }
                 JOptionPane.showMessageDialog(null, "Los valores son: \n" + compare, "Pantalla", 1);
                 jTFResultado.setText(compare);
                 break;
 
             default:
-                System.out.println("switch default case");
-
+                JOptionPane.showMessageDialog(null, "Código de operación desconocido: " + codopStr, "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1029,36 +965,33 @@ public class main extends javax.swing.JFrame {
     }//GEN-LAST:event_jTFirActionPerformed
 
     private void btnCap1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCap1ActionPerformed
-        // TODO add your handling code here:
         String dir = jTFintrucComp.getText().trim();
-     
 
-        while (dir.equals("") | dir.length() == 0) {
+        while (dir.isEmpty()) {
             JFrame fram = new JFrame("Entrada nula");
             fram.setAlwaysOnTop(true);
-            dir = dir.valueOf(JOptionPane.showInputDialog(fram,
-                    "La entrada no puede ser nula", "INVALID ENTRY", JOptionPane.INFORMATION_MESSAGE));
+            dir = JOptionPane.showInputDialog(fram,
+                    "La entrada no puede ser nula", "INVALID ENTRY", JOptionPane.INFORMATION_MESSAGE);
+            if (dir == null) return;
+            dir = dir.trim();
             jTFintrucComp.setText(dir);
-            if (dir.equals("") | dir.length() == 0) {
+            if (dir.isEmpty()) {
                 break;
             }
         }
 
-        /*if (dir.length() > 16) {
-            JFrame frame = new JFrame("Es mayor a 16");
-            frame.setAlwaysOnTop(true);
-            dir = dir.valueOf(JOptionPane.showInputDialog(frame,
-                    "La entrada no puede ser mayor a 16", "INVALID ENTRY", JOptionPane.INFORMATION_MESSAGE));
-            jTFintrucComp.setText(dir);
-            // b16=true;
-        }*/
-        if (dir.length() < 16 & !dir.equals("")) {
-            JFrame frames = new JFrame("Es menor a 16 bits");
-            frames.setAlwaysOnTop(true);
-            dir = dir.valueOf(JOptionPane.showInputDialog(frames,
-                    "La entrada no puede ser menor a 16 bits", "INVALID ENTRY", JOptionPane.INFORMATION_MESSAGE));
-            jTFintrucComp.setText(dir);
-            //bm16=true;
+        if (dir.length() != 16) {
+            JOptionPane.showMessageDialog(null,
+                    "La entrada debe tener exactamente 16 bits",
+                    "Error de longitud", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!isValidBinary(dir)) {
+            JOptionPane.showMessageDialog(null,
+                    "La entrada solo puede contener 0s y 1s",
+                    "Error de formato", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
         btnCap1.setEnabled(false);
@@ -1070,13 +1003,9 @@ public class main extends javax.swing.JFrame {
 
         try {
             paso1(inst1, inst2, ciclo);
-
         } catch (InterruptedException ex) {
-            Logger.getLogger(main.class
-                    .getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(main.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-
     }//GEN-LAST:event_btnCap1ActionPerformed
 
     private void btnCap2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCap2ActionPerformed
@@ -1106,11 +1035,7 @@ public class main extends javax.swing.JFrame {
     }//GEN-LAST:event_btnCap4ActionPerformed
 
     private void btnExeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExeActionPerformed
-        // TODO add your handling code here:
-        int opcion = Integer.parseInt(codop);
-
-        exeResultado(opcion);
-
+        exeResultado(codop);
     }//GEN-LAST:event_btnExeActionPerformed
 
     private void btnCap3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCap3ActionPerformed
