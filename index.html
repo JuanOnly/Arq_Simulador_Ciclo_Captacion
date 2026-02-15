@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Ciclo de Captación</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>CPU Fetch Cycle Simulator | Simulador de Ciclo de Captación</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-dark: #1e1e2e;
-            --bg-card: #2a2a3e;
-            --accent: #89b4fa;
-            --accent-hover: #b4befe;
-            --text: #cdd6f4;
-            --text-dim: #a6adc8;
-            --success: #a6e3a1;
-            --error: #f38ba8;
-            --warning: #fab387;
+            --bg-dark: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #21262d;
+            --accent: #58a6ff;
+            --accent-glow: #388bfd;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --success: #3fb950;
+            --error: #f85149;
+            --warning: #d29922;
+            --opcode: #ff7b72;
+            --dir1: #79c0ff;
+            --dir2: #7ee787;
+            --border: #30363d;
         }
         
         * {
@@ -30,134 +36,463 @@
             color: var(--text);
             min-height: 100vh;
             padding: 20px;
+            background-image: 
+                radial-gradient(ellipse at top, #1a2332 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, #0f1923 0%, transparent 50%);
         }
         
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: var(--accent);
-            font-size: 2rem;
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
         }
         
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .help-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .help-btn:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+            transform: scale(1.1);
+        }
+        
+        /* Language Toggle */
+        .lang-toggle {
+            display: flex;
+            gap: 5px;
+            background: var(--bg-card);
+            padding: 5px;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+        
+        .lang-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .lang-btn.active {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Container */
         .container {
             max-width: 1400px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
         }
         
+        /* Cards */
         .card {
             background: var(--bg-card);
-            border-radius: 12px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(88, 166, 255, 0.1);
         }
         
         .card h2 {
+            font-family: 'Space Grotesk', sans-serif;
             color: var(--accent);
-            font-size: 1.1rem;
+            font-size: 1rem;
             margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
+        .card h2 i {
+            font-size: 1rem;
+        }
+        
+        /* Registers */
         .register {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .register:last-child {
+            border-bottom: none;
         }
         
         .register-label {
             color: var(--text-dim);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .register-label .tooltip {
+            position: relative;
+            cursor: help;
+        }
+        
+        .register-label .tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-dark);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 100;
+            border: 1px solid var(--border);
         }
         
         .register-value {
             font-family: 'Fira Code', monospace;
             color: var(--success);
-            background: rgba(0,0,0,0.3);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.85rem;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
         }
         
+        /* Input Section */
         .input-section {
             grid-column: 1 / -1;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
+            background: linear-gradient(135deg, var(--bg-card), #1a2332);
+            border: 1px solid var(--border);
         }
         
-        input[type="text"] {
-            background: var(--bg-card);
-            border: 2px solid var(--accent);
-            color: var(--text);
-            padding: 12px 20px;
+        .input-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .input-tab {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 10px 20px;
             border-radius: 8px;
-            font-family: 'Fira Code', monospace;
-            font-size: 1rem;
-            width: 300px;
+            cursor: pointer;
+            font-weight: 600;
             transition: all 0.3s;
         }
         
-        input[type="text"]:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.3);
-        }
-        
-        button {
+        .input-tab.active {
             background: var(--accent);
             color: var(--bg-dark);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            border-color: var(--accent);
+        }
+        
+        /* Builder Input */
+        .builder-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .builder-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .builder-field label {
+            color: var(--text-dim);
+            font-size: 0.85rem;
             font-weight: 600;
-            cursor: pointer;
+        }
+        
+        .builder-field select,
+        .builder-field input {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
             transition: all 0.3s;
         }
         
-        button:hover {
-            background: var(--accent-hover);
+        .builder-field select:focus,
+        .builder-field input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+        }
+        
+        .binary-preview {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .binary-preview .label {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+        
+        .binary-display {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .binary-segment {
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            padding: 8px 12px;
+            border-radius: 4px;
+            letter-spacing: 2px;
+        }
+        
+        .binary-segment.opcode {
+            background: rgba(255, 123, 114, 0.2);
+            color: var(--opcode);
+            border: 1px solid var(--opcode);
+        }
+        
+        .binary-segment.dir1 {
+            background: rgba(121, 192, 255, 0.2);
+            color: var(--dir1);
+            border: 1px solid var(--dir1);
+        }
+        
+        .binary-segment.dir2 {
+            background: rgba(126, 231, 135, 0.2);
+            color: var(--dir2);
+            border: 1px solid var(--dir2);
+        }
+        
+        .builder-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        /* Manual Input */
+        .manual-input {
+            display: none;
+        }
+        
+        .manual-input.active {
+            display: block;
+        }
+        
+        .manual-input input {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 2px solid var(--accent);
+            color: var(--text);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 8px;
+        }
+        
+        .manual-input input:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.2);
+        }
+        
+        .input-hint {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        /* Examples */
+        .examples {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .examples h3 {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        
+        .example-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .example-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent);
             transform: translateY(-2px);
         }
         
-        button:disabled {
-            background: var(--text-dim);
-            cursor: not-allowed;
-            transform: none;
+        .example-btn .op-name {
+            font-weight: 600;
+            color: var(--accent);
         }
         
-        .btn-execute {
-            background: var(--success);
+        .example-btn .op-desc {
+            font-size: 0.75rem;
+            color: var(--text-dim);
         }
         
-        .btn-reset {
-            background: var(--error);
-        }
-        
-        .steps {
+        /* Control Buttons */
+        .controls {
+            grid-column: 1 / -1;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 10px;
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
         }
         
         .step-btn {
-            width: 45px;
-            height: 45px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            color: var(--text-dim);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            font-size: 1rem;
         }
         
+        .step-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: scale(1.1);
+        }
+        
+        .step-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .step-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
+        }
+        
+        .action-btn {
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-fetch {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+        
+        .btn-execute {
+            background: var(--success);
+            color: var(--bg-dark);
+        }
+        
+        .btn-reset {
+            background: var(--error);
+            color: white;
+        }
+        
+        .action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Result Area */
         .result-area {
             grid-column: 1 / -1;
             text-align: center;
@@ -165,378 +500,1107 @@
         
         .result-display {
             font-family: 'Fira Code', monospace;
-            font-size: 2rem;
+            font-size: 2.5rem;
             color: var(--success);
-            background: rgba(0,0,0,0.3);
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 15px;
-            min-height: 80px;
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 4px;
         }
         
-        .codops {
+        /* Step Description */
+        .step-description {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(63, 185, 80, 0.1));
+            border: 1px solid var(--accent);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        
+        .step-description h3 {
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .step-description p {
+            color: var(--text);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        /* CPU Diagram */
+        .cpu-diagram {
             grid-column: 1 / -1;
             background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+        }
+        
+        .diagram-title {
+            text-align: center;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .diagram-box {
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px 25px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .diagram-box.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+        }
+        
+        .diagram-box.cpu {
+            border-color: var(--warning);
+        }
+        
+        .diagram-box.memory {
+            border-color: var(--success);
+        }
+        
+        .diagram-box h4 {
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        
+        .diagram-box .components {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .diagram-component {
+            background: var(--bg-card);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+        
+        .diagram-arrow {
+            color: var(--text-dim);
+            font-size: 1.5rem;
+        }
+        
+        /* Codops Reference */
+        .codops {
+            grid-column: 1 / -1;
         }
         
         .codops-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 10px;
-            margin-top: 15px;
         }
         
         .codop-item {
-            background: rgba(0,0,0,0.2);
-            padding: 8px 12px;
-            border-radius: 6px;
+            background: var(--bg-dark);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .codop-item .code {
             font-family: 'Fira Code', monospace;
-            font-size: 0.85rem;
-        }
-        
-        .codop-item span {
             color: var(--warning);
+            font-weight: 600;
         }
         
-        .message {
+        .codop-item .name {
+            color: var(--text-dim);
+        }
+        
+        /* Modal */
+        .modal-overlay {
             position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 40px;
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
             top: 20px;
             right: 20px;
-            padding: 15px 25px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover {
+            color: var(--error);
+        }
+        
+        .modal h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .modal h3 {
+            color: var(--accent);
+            margin: 25px 0 15px;
+            font-size: 1.1rem;
+        }
+        
+        .modal p {
+            color: var(--text-dim);
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        
+        .modal .highlight {
+            color: var(--text);
+            background: var(--bg-dark);
+            padding: 15px;
             border-radius: 8px;
-            background: var(--success);
-            color: var(--bg-dark);
-            font-weight: 600;
-            transform: translateX(400px);
-            transition: transform 0.3s;
+            font-family: 'Fira Code', monospace;
+            margin: 15px 0;
+            text-align: center;
+            letter-spacing: 2px;
         }
         
-        .message.show {
-            transform: translateX(0);
+        .modal .format-breakdown {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
         }
         
-        .message.error {
-            background: var(--error);
+        .modal .format-part {
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .modal .format-part.op {
+            background: rgba(255, 123, 114, 0.2);
+            color: var(--opcode);
+            border: 1px solid var(--opcode);
         }
         
-        .active {
-            animation: pulse 1s infinite;
-            box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.5);
+        .modal .format-part.d1 {
+            background: rgba(121, 192, 255, 0.2);
+            color: var(--dir1);
+            border: 1px solid var(--dir1);
+        }
+        
+        .modal .format-part.d2 {
+            background: rgba(126, 231, 135, 0.2);
+            color: var(--dir2);
+            border: 1px solid var(--dir2);
+        }
+        
+        .modal .links {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .modal .link-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .modal .link-btn:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        .modal .link-btn i {
+            font-size: 1.2rem;
+        }
+        
+        .modal .credits {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        
+        /* 16-bit Explainer */
+        .bit-explainer {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, var(--bg-card), #1a2332);
+            border: 1px solid var(--border);
+        }
+        
+        .explainer-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .bit-box {
+            width: 35px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .bit-box.opcode-bit {
+            background: rgba(255, 123, 114, 0.2);
+            color: var(--opcode);
+            border: 1px solid var(--opcode);
+        }
+        
+        .bit-box.dir1-bit {
+            background: rgba(121, 192, 255, 0.2);
+            color: var(--dir1);
+            border: 1px solid var(--dir1);
+        }
+        
+        .bit-box.dir2-bit {
+            background: rgba(126, 231, 135, 0.2);
+            color: var(--dir2);
+            border: 1px solid var(--dir2);
+        }
+        
+        .explainer-labels {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .explainer-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        .explainer-label .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        
+        .explainer-label .dot.op { background: var(--opcode); }
+        .explainer-label .dot.d1 { background: var(--dir1); }
+        .explainer-label .dot.d2 { background: var(--dir2); }
+        
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header h1 {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .diagram-container {
+                flex-direction: column;
+            }
+            .diagram-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        /* Animations */
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(88, 166, 255, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(88, 166, 255, 0.6); }
+        }
+        
+        .glowing {
+            animation: glow 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
         }
     </style>
 </head>
 <body>
-    <h1>Simulador de Ciclo de Captación - CPU</h1>
+    <header class="header">
+        <h1>CPU Fetch Cycle Simulator</h1>
+        <div class="header-right">
+            <div class="lang-toggle">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="es">ES</button>
+            </div>
+            <button class="help-btn" onclick="openModal()" title="Help / Ayuda">
+                <i class="fas fa-question"></i>
+            </button>
+        </div>
+    </header>
     
     <div class="container">
+        <!-- CPU Registers -->
         <div class="card">
-            <h2>Unidad de Control</h2>
+            <h2><i class="fas fa-microchip"></i> CPU Registers</h2>
             <div class="register">
-                <span class="register-label">UC</span>
-                <span class="register-value" id="uc">-</span>
+                <span class="register-label">
+                    UC
+                    <span class="tooltip" data-tip="Control Unit / Unidad de Control">?</span>
+                </span>
+                <span class="register-value" id="uc">---</span>
             </div>
             <div class="register">
-                <span class="register-label">PC</span>
+                <span class="register-label">
+                    PC
+                    <span class="tooltip" data-tip="Program Counter">?</span>
+                </span>
                 <span class="register-value" id="pc">0000000000000000</span>
             </div>
             <div class="register">
-                <span class="register-label">IR</span>
+                <span class="register-label">
+                    IR
+                    <span class="tooltip" data-tip="Instruction Register">?</span>
+                </span>
                 <span class="register-value" id="ir">0000000000000000</span>
             </div>
         </div>
         
+        <!-- Memory Registers -->
         <div class="card">
-            <h2>Registradores</h2>
+            <h2><i class="fas fa-memory"></i> Memory Registers</h2>
             <div class="register">
-                <span class="register-label">MAR</span>
+                <span class="register-label">
+                    MAR
+                    <span class="tooltip" data-tip="Memory Address Register">?</span>
+                </span>
                 <span class="register-value" id="mar">000000</span>
             </div>
             <div class="register">
-                <span class="register-label">MBR</span>
+                <span class="register-label">
+                    MBR
+                    <span class="tooltip" data-tip="Memory Buffer Register">?</span>
+                </span>
                 <span class="register-value" id="mbr">000000</span>
             </div>
             <div class="register">
-                <span class="register-label">AC</span>
+                <span class="register-label">
+                    AC
+                    <span class="tooltip" data-tip="Accumulator">?</span>
+                </span>
                 <span class="register-value" id="ac">000000</span>
             </div>
         </div>
         
+        <!-- Buses -->
         <div class="card">
-            <h2>Buses</h2>
+            <h2><i class="fas fa-exchange-alt"></i> Buses</h2>
             <div class="register">
-                <span class="register-label">Bus Datos</span>
+                <span class="register-label">Data Bus</span>
                 <span class="register-value" id="busDatos">000000</span>
             </div>
             <div class="register">
-                <span class="register-label">Bus Control</span>
+                <span class="register-label">Control Bus</span>
                 <span class="register-value" id="busControl">0000</span>
             </div>
             <div class="register">
-                <span class="register-label">Bus Instrucciones</span>
+                <span class="register-label">Address Bus</span>
                 <span class="register-value" id="busInst">0000000000000000</span>
             </div>
         </div>
         
+        <!-- ALU -->
         <div class="card">
-            <h2>ALU</h2>
+            <h2><i class="fas fa-calculator"></i> ALU</h2>
             <div class="register">
-                <span class="register-label">Operación</span>
-                <span class="register-value" id="aluOp">-</span>
+                <span class="register-label">Operation</span>
+                <span class="register-value" id="aluOp">---</span>
             </div>
             <div class="register">
-                <span class="register-label">Dir 1</span>
+                <span class="register-label">Operand 1</span>
                 <span class="register-value" id="dir1">000000</span>
             </div>
             <div class="register">
-                <span class="register-label">Dir 2</span>
+                <span class="register-label">Operand 2</span>
                 <span class="register-value" id="dir2">000000</span>
             </div>
         </div>
         
+        <!-- 16-bit Explainer -->
+        <div class="card bit-explainer">
+            <h2><i class="fas fa-info-circle"></i> Understanding 16-bit Instructions</h2>
+            <p style="color: var(--text-dim); text-align: center; margin-bottom: 10px;">
+                Every instruction is 16 binary digits (0s and 1s)
+            </p>
+            <div class="explainer-visual">
+                <span style="color: var(--text-dim);">16 bits:</span>
+                <div class="bit-box opcode-bit">0</div>
+                <div class="bit-box opcode-bit">1</div>
+                <div class="bit-box opcode-bit">0</div>
+                <div class="bit-box opcode-bit">0</div>
+                <div class="bit-box dir1-bit">0</div>
+                <div class="bit-box dir1-bit">0</div>
+                <div class="bit-box dir1-bit">0</div>
+                <div class="bit-box dir1-bit">0</div>
+                <div class="bit-box dir1-bit">0</div>
+                <div class="bit-box dir1-bit">1</div>
+                <div class="bit-box dir2-bit">0</div>
+                <div class="bit-box dir2-bit">0</div>
+                <div class="bit-box dir2-bit">0</div>
+                <div class="bit-box dir2-bit">0</div>
+                <div class="bit-box dir2-bit">1</div>
+                <div class="bit-box dir2-bit">1</div>
+            </div>
+            <div class="explainer-labels">
+                <div class="explainer-label">
+                    <span class="dot op"></span>
+                    <span>4 bits = Operation Code (what to do)</span>
+                </div>
+                <div class="explainer-label">
+                    <span class="dot d1"></span>
+                    <span>6 bits = First Address (0-63)</span>
+                </div>
+                <div class="explainer-label">
+                    <span class="dot d2"></span>
+                    <span>6 bits = Second Address (0-63)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Input Section -->
         <div class="card input-section">
-            <input type="text" id="instruccion" placeholder="Ingrese instrucción (16 bits)" maxlength="16">
-            <button onclick="validarYComenzar()">1. Fetch</button>
-            <button onclick="paso2()" id="btn2" disabled>2. PC→MAR</button>
-            <button onclick="paso3()" id="btn3" disabled>3. MAR→Bus</button>
-            <button onclick="paso4()" id="btn4" disabled>4. Mem→MBR</button>
-            <button onclick="paso5()" id="btn5" disabled>5. MBR→IR</button>
-            <button onclick="paso6()" id="btn6" disabled>6. Decode</button>
-            <button onclick="ejecutar()" class="btn-execute" id="btnExe" disabled>7. Ejecutar</button>
-            <button onclick="reset()" class="btn-reset">Reset</button>
+            <div class="input-tabs">
+                <button class="input-tab active" data-tab="builder">
+                    <i class="fas fa-list"></i> Builder Mode
+                </button>
+                <button class="input-tab" data-tab="manual">
+                    <i class="fas fa-keyboard"></i> Manual Entry
+                </button>
+            </div>
+            
+            <!-- Builder Input -->
+            <div class="builder-input active" id="builderTab">
+                <div class="builder-grid">
+                    <div class="builder-field">
+                        <label>Operation</label>
+                        <select id="operationSelect">
+                            <option value="0000">0000 - MOVE</option>
+                            <option value="0001">0001 - CLEAR</option>
+                            <option value="0010">0010 - SET</option>
+                            <option value="0011">0011 - STORE</option>
+                            <option value="0100" selected>0100 - ADD</option>
+                            <option value="0101">0101 - SUB</option>
+                            <option value="0110">0110 - MULTIPLY</option>
+                            <option value="0111">0111 - DIVIDE</option>
+                            <option value="1000">1000 - NEGATE</option>
+                            <option value="1001">1001 - AND</option>
+                            <option value="1010">1010 - OR</option>
+                            <option value="1011">1011 - NOT</option>
+                            <option value="1100">1100 - COMPARE</option>
+                        </select>
+                    </div>
+                    <div class="builder-field">
+                        <label>Address 1 (0-63)</label>
+                        <input type="number" id="addr1" min="0" max="63" value="5">
+                    </div>
+                    <div class="builder-field">
+                        <label>Address 2 (0-63)</label>
+                        <input type="number" id="addr2" min="0" max="63" value="3">
+                    </div>
+                </div>
+                <div class="binary-preview">
+                    <div class="label">Generated Binary Instruction:</div>
+                    <div class="binary-display">
+                        <span class="binary-segment opcode" id="previewOpcode">0100</span>
+                        <span class="binary-segment dir1" id="previewDir1">000101</span>
+                        <span class="binary-segment dir2" id="previewDir2">000011</span>
+                    </div>
+                </div>
+                <div class="builder-actions">
+                    <button class="action-btn btn-fetch" onclick="startFetch()">
+                        <i class="fas fa-play"></i> Start Fetch
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Manual Input -->
+            <div class="manual-input" id="manualTab">
+                <input type="text" id="manualInput" placeholder="0000000000000000" maxlength="16">
+                <p class="input-hint">Enter exactly 16 binary digits (0 or 1)</p>
+                <div class="builder-actions" style="margin-top: 15px;">
+                    <button class="action-btn btn-fetch" onclick="startFetchManual()">
+                        <i class="fas fa-play"></i> Start Fetch
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Examples -->
+            <div class="examples">
+                <h3>Try These Examples / Prueba Estos Ejemplos:</h3>
+                <div class="example-grid">
+                    <button class="example-btn" onclick="loadExample('0100000101000101')">
+                        <span class="op-name">ADD (5 + 4)</span>
+                        <span class="op-desc">0100 000101 000100</span>
+                    </button>
+                    <button class="example-btn" onclick="loadExample('0101000010000010')">
+                        <span class="op-name">SUB (8 - 2)</span>
+                        <span class="op-desc">0101 001000 000010</span>
+                    </button>
+                    <button class="example-btn" onclick="loadExample('0110000100000011')">
+                        <span class="op-name">MULTIPLY (1 × 3)</span>
+                        <span class="op-desc">0110 000001 000011</span>
+                    </button>
+                    <button class="example-btn" onclick="loadExample('1001000001000100')">
+                        <span class="op-name">AND (1 & 4)</span>
+                        <span class="op-desc">1001 000001 000100</span>
+                    </button>
+                    <button class="example-btn" onclick="loadExample('1010000101000101')">
+                        <span class="op-name">OR (1 | 4)</span>
+                        <span class="op-desc">1010 000001 000101</span>
+                    </button>
+                    <button class="example-btn" onclick="loadExample('1100000100000100')">
+                        <span class="op-name">COMPARE (1 vs 4)</span>
+                        <span class="op-desc">1100 000001 000100</span>
+                    </button>
+                </div>
+            </div>
         </div>
         
+        <!-- Step Description -->
+        <div class="step-description" id="stepDesc" style="display: none;">
+            <h3 id="stepTitle">Step 1: Fetch</h3>
+            <p id="stepText">The CPU fetches the instruction from memory...</p>
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button class="step-btn" id="btn1" onclick="step(1)" disabled>1</button>
+            <button class="step-btn" id="btn2" onclick="step(2)" disabled>2</button>
+            <button class="step-btn" id="btn3" onclick="step(3)" disabled>3</button>
+            <button class="step-btn" id="btn4" onclick="step(4)" disabled>4</button>
+            <button class="step-btn" id="btn5" onclick="step(5)" disabled>5</button>
+            <button class="step-btn" id="btn6" onclick="step(6)" disabled>6</button>
+            <div style="width: 30px;"></div>
+            <button class="action-btn btn-execute" id="btnExecute" onclick="execute()" disabled>
+                <i class="fas fa-cog"></i> Execute
+            </button>
+            <button class="action-btn btn-reset" onclick="resetAll()">
+                <i class="fas fa-redo"></i> Reset
+            </button>
+        </div>
+        
+        <!-- Result -->
         <div class="card result-area">
-            <h2>Resultado</h2>
-            <div class="result-display" id="resultado">-</div>
+            <h2><i class="fas fa-poll"></i> Result / Resultado</h2>
+            <div class="result-display" id="result">---</div>
         </div>
         
-        <div class="codops">
-            <h2>Códigos de Operación</h2>
+        <!-- CPU Diagram -->
+        <div class="cpu-diagram">
+            <div class="diagram-title">CPU Architecture / Arquitectura de la CPU</div>
+            <div class="diagram-container">
+                <div class="diagram-box memory" id="diagramMemory">
+                    <h4>Memory / Memoria</h4>
+                    <div class="components">
+                        <span class="diagram-component">RAM</span>
+                        <span class="diagram-component">MAR</span>
+                        <span class="diagram-component">MBR</span>
+                    </div>
+                </div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-box cpu" id="diagramCPU">
+                    <h4>CPU</h4>
+                    <div class="components">
+                        <span class="diagram-component">PC</span>
+                        <span class="diagram-component">IR</span>
+                        <span class="diagram-component">UC</span>
+                        <span class="diagram-component">ALU</span>
+                        <span class="diagram-component">AC</span>
+                    </div>
+                </div>
+                <div class="diagram-arrow">→</div>
+                <div class="diagram-box">
+                    <h4>Output / Salida</h4>
+                    <div class="components">
+                        <span class="diagram-component">Result</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Codops Reference -->
+        <div class="card codops">
+            <h2><i class="fas fa-code"></i> Operation Codes Reference</h2>
             <div class="codops-grid">
-                <div class="codop-item"><span>0000</span> - MOVE</div>
-                <div class="codop-item"><span>0001</span> - CLEAR</div>
-                <div class="codop-item"><span>0010</span> - SET</div>
-                <div class="codop-item"><span>0011</span> - STORE</div>
-                <div class="codop-item"><span>0100</span> - ADD</div>
-                <div class="codop-item"><span>0101</span> - SUB</div>
-                <div class="codop-item"><span>0110</span> - MPY</div>
-                <div class="codop-item"><span>0111</span> - DIV</div>
-                <div class="codop-item"><span>1000</span> - NEGATE</div>
-                <div class="codop-item"><span>1001</span> - AND</div>
-                <div class="codop-item"><span>1010</span> - OR</div>
-                <div class="codop-item"><span>1011</span> - NOT</div>
-                <div class="codop-item"><span>1100</span> - COMPARE</div>
+                <div class="codop-item"><span class="code">0000</span> <span class="name">MOVE</span></div>
+                <div class="codop-item"><span class="code">0001</span> <span class="name">CLEAR</span></div>
+                <div class="codop-item"><span class="code">0010</span> <span class="name">SET</span></div>
+                <div class="codop-item"><span class="code">0011</span> <span class="name">STORE</span></div>
+                <div class="codop-item"><span class="code">0100</span> <span class="name">ADD</span></div>
+                <div class="codop-item"><span class="code">0101</span> <span class="name">SUB</span></div>
+                <div class="codop-item"><span class="code">0110</span> <span class="name">MULTIPLY</span></div>
+                <div class="codop-item"><span class="code">0111</span> <span class="name">DIVIDE</span></div>
+                <div class="codop-item"><span class="code">1000</span> <span class="name">NEGATE</span></div>
+                <div class="codop-item"><span class="code">1001</span> <span class="name">AND</span></div>
+                <div class="codop-item"><span class="code">1010</span> <span class="name">OR</span></div>
+                <div class="codop-item"><span class="code">1011</span> <span class="name">NOT</span></div>
+                <div class="codop-item"><span class="code">1100</span> <span class="name">COMPARE</span></div>
             </div>
         </div>
     </div>
     
-    <div class="message" id="message"></div>
-    
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <h2>CPU Fetch Cycle Simulator</h2>
+            
+            <h3>What is this? / ¿Qué es esto?</h3>
+            <p>This is an interactive simulator that teaches how a CPU fetches and executes instructions. It demonstrates the <strong>Fetch Cycle</strong>, the fundamental process by which computers retrieve instructions from memory.</p>
+            <p>Este es un simulador interactivo que enseña cómo una CPU captura y ejecuta instrucciones. Demuestra el <strong>Ciclo de Captación</strong>, el proceso fundamental por el cual las computadoras recuperan instrucciones de la memoria.</p>
+            
+            <h3>How it works / Cómo funciona</h3>
+            <p>Every instruction your computer runs goes through two main phases:</p>
+            <div class="highlight">1. FETCH → 2. EXECUTE</div>
+            <p>Cada instrucción que tu computadora ejecuta pasa por dos fases principales:</p>
+            <div class="highlight">1. CAPTACIÓN → 2. EJECUCIÓN</div>
+            
+            <h3>The 16-bit Instruction Format</h3>
+            <div class="format-breakdown">
+                <div class="format-part op">CCCC</div>
+                <div class="format-part d1">DDDDDD</div>
+                <div class="format-part d2">DDDDDD</div>
+            </div>
+            <p><strong>Operation Code (4 bits):</strong> Tells the CPU what to do (add, subtract, move data, etc.)<br>
+            <strong>Address 1 (6 bits):</strong> Location of first data (0-63)<br>
+            <strong>Address 2 (6 bits):</strong> Location of second data (0-63)</p>
+            
+            <h3>Try It! / ¡Pruébalo!</h3>
+            <p>1. Select an operation from the dropdown or enter binary manually<br>
+            2. Click "Start Fetch" to see the fetch cycle step by step<br>
+            3. Click "Execute" to see the result</p>
+            <p>1. Selecciona una operación del menú o ingresa binario manualmente<br>
+            2. Haz clic en "Start Fetch" para ver el ciclo de captación paso a paso<br>
+            3. Haz clic en "Execute" para ver el resultado</p>
+            
+            <div class="links">
+                <a href="https://portfolio-one-nu-94.vercel.app/" target="_blank" class="link-btn">
+                    <i class="fas fa-globe"></i> Portfolio
+                </a>
+                <a href="https://linkedin.com/in/juan-garcia-554ab7200/" target="_blank" class="link-btn">
+                    <i class="fab fa-linkedin"></i> LinkedIn
+                </a>
+                <a href="https://github.com/JuanOnly" target="_blank" class="link-btn">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+            </div>
+            
+            <div class="credits">
+                Created by Juan García | Created with passion for teaching computer architecture
+            </div>
+        </div>
+    </div>
+
     <script>
-        let ciclo = 0;
-        let instruccion = '';
+        // Language translations
+        const translations = {
+            en: {
+                header: "CPU Fetch Cycle Simulator",
+                cpuRegisters: "CPU Registers",
+                memoryRegisters: "Memory Registers",
+                buses: "Buses",
+                alu: "ALU",
+                bitExplainer: "Understanding 16-bit Instructions",
+                bitExplainerText: "Every instruction is 16 binary digits (0s and 1s)",
+                opcodeBits: "4 bits = Operation Code",
+                dir1Bits: "6 bits = First Address",
+                dir2Bits: "6 bits = Second Address",
+                builderMode: "Builder Mode",
+                manualEntry: "Manual Entry",
+                operation: "Operation",
+                address: "Address",
+                generatedBinary: "Generated Binary Instruction",
+                startFetch: "Start Fetch",
+                tryExamples: "Try These Examples",
+                result: "Result",
+                cpuArchitecture: "CPU Architecture",
+                operationCodes: "Operation Codes Reference",
+                step: "Step",
+                fetch: "Fetch",
+                execute: "Execute",
+                reset: "Reset",
+                stepTitles: [
+                    "PC → MAR: Program Counter address loaded into Memory Address Register",
+                    "Memory Read: Request sent to memory via Control Bus",
+                    "Data Transfer: Instruction loaded from Memory to MBR via Data Bus",
+                    "MBR → IR: Instruction stored in Instruction Register",
+                    "Decode: Control Unit decodes the instruction",
+                    "Ready: CPU is ready to execute the instruction"
+                ]
+            },
+            es: {
+                header: "Simulador de Ciclo de Captación CPU",
+                cpuRegisters: "Registros CPU",
+                memoryRegisters: "Registros de Memoria",
+                buses: "Buses",
+                alu: "ALU",
+                bitExplainer: "Entendiendo Instrucciones de 16 bits",
+                bitExplainerText: "Cada instrucción son 16 dígitos binarios (0s y 1s)",
+                opcodeBits: "4 bits = Código de Operación",
+                dir1Bits: "6 bits = Primera Dirección",
+                dir2Bits: "6 bits = Segunda Dirección",
+                builderMode: "Modo Constructor",
+                manualEntry: "Entrada Manual",
+                operation: "Operación",
+                address: "Dirección",
+                generatedBinary: "Instrucción Binaria Generada",
+                startFetch: "Iniciar Captación",
+                tryExamples: "Prueba Estos Ejemplos",
+                result: "Resultado",
+                cpuArchitecture: "Arquitectura de la CPU",
+                operationCodes: "Códigos de Operación",
+                step: "Paso",
+                fetch: "Captación",
+                execute: "Ejecutar",
+                reset: "Reiniciar",
+                stepTitles: [
+                    "PC → MAR: Dirección del Contador de Programa cargada en el Registro de Dirección de Memoria",
+                    "Lectura de Memoria: Solicitud enviada a memoria via Bus de Control",
+                    "Transferencia de Datos: Instrucción cargada de Memoria a MBR via Bus de Datos",
+                    "MBR → IR: Instrucción almacenada en el Registro de Instrucción",
+                    "Decodificar: La Unidad de Control decodifica la instrucción",
+                    "Listo: La CPU está lista para ejecutar la instrucción"
+                ]
+            }
+        };
+        
+        let currentLang = 'en';
+        let currentStep = 0;
+        let instruction = '';
         let codop = '';
         let dir1 = '';
         let dir2 = '';
         
-        const operaciones = {
-            '0000': 'MOVE',
-            '0001': 'CLEAR',
-            '0010': 'SET',
-            '0011': 'STORE',
-            '0100': 'ADD',
-            '0101': 'SUB',
-            '0110': 'MPY',
-            '0111': 'DIV',
-            '1000': 'NEGATE',
-            '1001': 'AND',
-            '1010': 'OR',
-            '1011': 'NOT',
-            '1100': 'COMPARE'
-        };
+        // Language toggle
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentLang = btn.dataset.lang;
+                updateLanguage();
+            });
+        });
         
-        function showMessage(text, isError = false) {
-            const msg = document.getElementById('message');
-            msg.textContent = text;
-            msg.className = 'message show' + (isError ? ' error' : '');
-            setTimeout(() => msg.className = 'message', 3000);
+        function updateLanguage() {
+            const t = translations[currentLang];
+            document.querySelector('.header h1').textContent = t.header;
         }
         
-        function validarYComenzar() {
-            instruccion = document.getElementById('instruccion').value.trim();
+        // Modal
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+        
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+        
+        // Input tabs
+        document.querySelectorAll('.input-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.input-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const tabName = tab.dataset.tab;
+                document.getElementById('builderTab').classList.toggle('active', tabName === 'builder');
+                document.getElementById('manualTab').classList.toggle('active', tabName === 'manual');
+            });
+        });
+        
+        // Builder inputs
+        function updateBinaryPreview() {
+            const op = document.getElementById('operationSelect').value;
+            const a1 = parseInt(document.getElementById('addr1').value) || 0;
+            const a2 = parseInt(document.getElementById('addr2').value) || 0;
             
-            if (!instruccion) {
-                showMessage('La entrada no puede ser vacía', true);
+            const d1 = a1.toString(2).padStart(6, '0');
+            const d2 = a2.toString(2).padStart(6, '0');
+            
+            document.getElementById('previewOpcode').textContent = op;
+            document.getElementById('previewDir1').textContent = d1;
+            document.getElementById('previewDir2').textContent = d2;
+        }
+        
+        document.getElementById('operationSelect').addEventListener('change', updateBinaryPreview);
+        document.getElementById('addr1').addEventListener('input', updateBinaryPreview);
+        document.getElementById('addr2').addEventListener('input', updateBinaryPreview);
+        
+        // Load example
+        function loadExample(binary) {
+            document.querySelector('[data-tab="manual"]').click();
+            document.getElementById('manualInput').value = binary;
+            startFetchManual();
+        }
+        
+        // Start fetch from builder
+        function startFetch() {
+            const op = document.getElementById('operationSelect').value;
+            const a1 = parseInt(document.getElementById('addr1').value) || 0;
+            const a2 = parseInt(document.getElementById('addr2').value) || 0;
+            
+            const d1 = a1.toString(2).padStart(6, '0');
+            const d2 = a2.toString(2).padStart(6, '0');
+            
+            instruction = op + d1 + d2;
+            startFetchCycle(instruction);
+        }
+        
+        // Start fetch from manual
+        function startFetchManual() {
+            const input = document.getElementById('manualInput').value.trim();
+            
+            if (input.length !== 16 || !/^[01]+$/.test(input)) {
+                alert(currentLang === 'en' ? 
+                    'Please enter exactly 16 binary digits (0 or 1)' :
+                    'Por favor ingresa exactamente 16 dígitos binarios (0 o 1)');
                 return;
             }
-            if (instruccion.length !== 16) {
-                showMessage('La instrucción debe tener exactamente 16 bits', true);
-                return;
-            }
-            if (!/^[01]+$/.test(instruccion)) {
-                showMessage('Solo se permiten 0s y 1s', true);
-                return;
-            }
             
-            codop = instruccion.substring(0, 4);
-            dir1 = instruccion.substring(4, 10);
-            dir2 = instruccion.substring(10, 16);
+            instruction = input;
+            startFetchCycle(instruction);
+        }
+        
+        function startFetchCycle(instr) {
+            codop = instr.substring(0, 4);
+            dir1 = instr.substring(4, 10);
+            dir2 = instr.substring(10, 16);
             
-            document.getElementById('ir').textContent = instruccion;
-            document.getElementById('uc').textContent = 'Fetching...';
-            
-            ciclo = 1;
-            enableButtons([2]);
-            showMessage('Ciclo de captación iniciado');
-        }
-        
-        function paso2() {
-            document.getElementById('uc').textContent = '';
-            document.getElementById('pc').textContent = instruccion;
-            document.getElementById('mar').textContent = dir1;
-            document.getElementById('busInst').textContent = instruccion;
-            ciclo = 2;
-            enableButtons([3]);
-        }
-        
-        function paso3() {
-            document.getElementById('pc').textContent = '';
-            document.getElementById('busDatos').textContent = dir1;
-            document.getElementById('busControl').textContent = '0010';
-            ciclo = 3;
-            enableButtons([4]);
-        }
-        
-        function paso4() {
-            document.getElementById('busControl').textContent = '';
-            document.getElementById('mbr').textContent = dir1;
-            document.getElementById('busDatos').textContent = dir1;
-            ciclo = 4;
-            enableButtons([5]);
-        }
-        
-        function paso5() {
-            document.getElementById('mbr').textContent = '';
-            document.getElementById('ir').textContent = instruccion;
-            document.getElementById('busDatos').textContent = '';
-            ciclo = 5;
-            enableButtons([6]);
-        }
-        
-        function paso6() {
-            document.getElementById('uc').textContent = 'Decode: ' + (operaciones[codop] || 'Unknown');
-            document.getElementById('aluOp').textContent = operaciones[codop] || '-';
+            document.getElementById('ir').textContent = instr;
             document.getElementById('dir1').textContent = dir1;
             document.getElementById('dir2').textContent = dir2;
-            ciclo = 6;
-            enableButtons(['exe']);
+            
+            // Enable step buttons
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('btn' + i).disabled = false;
+            }
+            
+            // Show step description
+            document.getElementById('stepDesc').style.display = 'block';
+            showStep(1);
         }
         
-        function ejecutar() {
-            let resultado = '';
+        function step(n) {
+            currentStep = n;
+            
+            // Update button states
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('btn' + i).classList.toggle('active', i === n);
+            }
+            
+            showStep(n);
+        }
+        
+        function showStep(n) {
+            const t = translations[currentLang];
+            const stepNum = currentLang === 'en' ? 'Step ' : 'Paso ';
+            
+            document.getElementById('stepTitle').textContent = stepNum + n + ': ' + t.stepTitles[n - 1];
+            
+            // Update registers based on step
+            const steps = {
+                1: () => {
+                    document.getElementById('pc').textContent = instruction;
+                    document.getElementById('mar').textContent = dir1;
+                    document.getElementById('busInst').textContent = instruction;
+                    document.getElementById('uc').textContent = '→';
+                },
+                2: () => {
+                    document.getElementById('busControl').textContent = '0010';
+                },
+                3: () => {
+                    document.getElementById('mbr').textContent = dir1;
+                    document.getElementById('busDatos').textContent = dir1;
+                    document.getElementById('busControl').textContent = '';
+                },
+                4: () => {
+                    document.getElementById('mbr').textContent = '';
+                    document.getElementById('busDatos').textContent = '';
+                },
+                5: () => {
+                    document.getElementById('uc').textContent = getOpName(codop);
+                    document.getElementById('aluOp').textContent = getOpName(codop);
+                    document.getElementById('diagramCPU').classList.add('active');
+                },
+                6: () => {
+                    document.getElementById('btnExecute').disabled = false;
+                }
+            };
+            
+            if (steps[n]) steps[n]();
+        }
+        
+        function getOpName(code) {
+            const ops = {
+                '0000': 'MOVE', '0001': 'CLEAR', '0010': 'SET', '0011': 'STORE',
+                '0100': 'ADD', '0101': 'SUB', '0110': 'MUL', '0111': 'DIV',
+                '1000': 'NEG', '1001': 'AND', '1010': 'OR', '1011': 'NOT',
+                '1100': 'CMP'
+            };
+            return ops[code] || '?';
+        }
+        
+        function execute() {
             const val1 = parseInt(dir1, 2);
             const val2 = parseInt(dir2, 2);
+            let result = '';
             
             switch (codop) {
                 case '0000': // MOVE
-                    resultado = dir1;
-                    showMessage(`MOVE: ${dir1} → ${dir2}`);
+                    result = dir1;
                     break;
                 case '0001': // CLEAR
-                    resultado = '000000';
-                    showMessage('CLEAR: Registros a 0');
+                    result = '000000';
                     break;
                 case '0010': // SET
-                    resultado = '111111';
-                    showMessage('SET: Registros a 1');
+                    result = '111111';
                     break;
                 case '0011': // STORE
-                    resultado = dir1;
-                    showMessage(`STORE: ${dir1} guardado`);
+                    result = dir1;
                     break;
                 case '0100': // ADD
-                    resultado = (val1 + val2).toString(2).padStart(6, '0');
-                    showMessage(`ADD: ${val1} + ${val2} = ${parseInt(resultado, 2)}`);
+                    result = (val1 + val2).toString(2).padStart(6, '0');
                     break;
                 case '0101': // SUB
-                    resultado = Math.abs(val1 - val2).toString(2).padStart(6, '0');
-                    showMessage(`SUB: ${val1} - ${val2} = ${parseInt(resultado, 2)}`);
+                    result = Math.abs(val1 - val2).toString(2).padStart(6, '0');
                     break;
-                case '0110': // MPY
-                    resultado = (val1 * val2).toString(2);
-                    showMessage(`MPY: ${val1} × ${val2} = ${parseInt(resultado, 2)}`);
+                case '0110': // MULTIPLY
+                    result = (val1 * val2).toString(2);
                     break;
-                case '0111': // DIV
+                case '0111': // DIVIDE
                     if (val2 === 0) {
-                        showMessage('ERROR: División por cero', true);
+                        alert(currentLang === 'en' ? 'Division by zero!' : '¡División por cero!');
                         return;
                     }
-                    resultado = Math.floor(val1 / val2).toString(2).padStart(6, '0');
-                    showMessage(`DIV: ${val1} ÷ ${val2} = ${parseInt(resultado, 2)}`);
+                    result = Math.floor(val1 / val2).toString(2).padStart(6, '0');
                     break;
                 case '1000': // NEGATE
-                    resultado = dir1.split('').map(b => b === '0' ? '1' : '0').join('') + '-' + 
-                               dir2.split('').map(b => b === '0' ? '1' : '0').join('');
-                    showMessage('NEGATE: Bits invertidos');
+                    result = dir1.split('').map(b => b === '0' ? '1' : '0').join('') + '-' + 
+                             dir2.split('').map(b => b === '0' ? '1' : '0').join('');
                     break;
                 case '1001': // AND
-                    resultado = '';
+                    result = '';
                     for (let i = 0; i < 6; i++) {
-                        resultado += (dir1[i] === '1' && dir2[i] === '1') ? '1' : '0';
+                        result += (dir1[i] === '1' && dir2[i] === '1') ? '1' : '0';
                     }
-                    showMessage('AND: Operación lógica');
                     break;
                 case '1010': // OR
-                    resultado = '';
+                    result = '';
                     for (let i = 0; i < 6; i++) {
-                        resultado += (dir1[i] === '1' || dir2[i] === '1') ? '1' : '0';
+                        result += (dir1[i] === '1' || dir2[i] === '1') ? '1' : '0';
                     }
-                    showMessage('OR: Operación lógica');
                     break;
                 case '1011': // NOT
-                    resultado = dir1.split('').map(b => b === '0' ? '1' : '0').join('') + '-' +
-                               dir2.split('').map(b => b === '0' ? '1' : '0').join('');
-                    showMessage('NOT: Operación lógica');
+                    result = dir1.split('').map(b => b === '0' ? '1' : '0').join('');
                     break;
                 case '1100': // COMPARE
-                    resultado = dir1 === dir2 ? 'IGUALES' : 'DISTINTOS';
-                    showMessage(`COMPARE: ${resultado}`);
+                    result = dir1 === dir2 ? 
+                        (currentLang === 'en' ? 'EQUAL / IGUAL' : 'IGUALES') : 
+                        (currentLang === 'en' ? 'DIFFERENT / DIFERENTE' : 'DIFERENTES');
                     break;
-                default:
-                    showMessage('Operación desconocida', true);
             }
             
-            document.getElementById('resultado').textContent = resultado;
-            document.getElementById('ac').textContent = resultado.length <= 6 ? resultado.padStart(6, '0') : resultado.substring(0, 6);
-            document.getElementById('btnExe').disabled = true;
+            document.getElementById('result').textContent = result;
+            document.getElementById('ac').textContent = result.length <= 6 ? result.padStart(6, '0') : result.substring(0, 6);
         }
         
-        function enableButtons(buttons) {
-            buttons.forEach(b => {
-                if (b === 'exe') {
-                    document.getElementById('btnExe').disabled = false;
-                } else {
-                    document.getElementById('btn' + b).disabled = false;
-                }
-            });
-        }
-        
-        function reset() {
-            ciclo = 0;
-            instruccion = '';
+        function resetAll() {
+            currentStep = 0;
+            instruction = '';
             codop = '';
             dir1 = '';
             dir2 = '';
-            
-            document.getElementById('instruccion').value = '';
-            document.getElementById('resultado').textContent = '-';
             
             const registers = ['uc', 'pc', 'ir', 'mar', 'mbr', 'ac', 'busDatos', 'busControl', 'busInst', 'aluOp', 'dir1', 'dir2'];
             registers.forEach(id => {
@@ -545,18 +1609,27 @@
                     el.textContent = '0000000000000000';
                 } else if (id === 'busControl') {
                     el.textContent = '0000';
+                } else if (id === 'aluOp' || id === 'uc') {
+                    el.textContent = '---';
                 } else {
                     el.textContent = '000000';
                 }
             });
             
-            for (let i = 2; i <= 6; i++) {
+            for (let i = 1; i <= 6; i++) {
                 document.getElementById('btn' + i).disabled = true;
+                document.getElementById('btn' + i).classList.remove('active');
             }
-            document.getElementById('btnExe').disabled = true;
             
-            showMessage('Simulador reiniciado');
+            document.getElementById('btnExecute').disabled = true;
+            document.getElementById('result').textContent = '---';
+            document.getElementById('stepDesc').style.display = 'none';
+            document.getElementById('diagramCPU').classList.remove('active');
+            document.getElementById('manualInput').value = '';
         }
+        
+        // Initialize
+        updateBinaryPreview();
     </script>
 </body>
 </html>
