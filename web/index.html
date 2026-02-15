@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Ciclo de Captación</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #1e1e2e;
+            --bg-card: #2a2a3e;
+            --accent: #89b4fa;
+            --accent-hover: #b4befe;
+            --text: #cdd6f4;
+            --text-dim: #a6adc8;
+            --success: #a6e3a1;
+            --error: #f38ba8;
+            --warning: #fab387;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--accent);
+            font-size: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .card h2 {
+            color: var(--accent);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .register {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .register-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        
+        .register-value {
+            font-family: 'Fira Code', monospace;
+            color: var(--success);
+            background: rgba(0,0,0,0.3);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .input-section {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        input[type="text"] {
+            background: var(--bg-card);
+            border: 2px solid var(--accent);
+            color: var(--text);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            width: 300px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.3);
+        }
+        
+        button {
+            background: var(--accent);
+            color: var(--bg-dark);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: var(--text-dim);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-execute {
+            background: var(--success);
+        }
+        
+        .btn-reset {
+            background: var(--error);
+        }
+        
+        .steps {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .step-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .result-area {
+            grid-column: 1 / -1;
+            text-align: center;
+        }
+        
+        .result-display {
+            font-family: 'Fira Code', monospace;
+            font-size: 2rem;
+            color: var(--success);
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            min-height: 80px;
+        }
+        
+        .codops {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .codops-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .codop-item {
+            background: rgba(0,0,0,0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .codop-item span {
+            color: var(--warning);
+        }
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background: var(--success);
+            color: var(--bg-dark);
+            font-weight: 600;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+        }
+        
+        .message.show {
+            transform: translateX(0);
+        }
+        
+        .message.error {
+            background: var(--error);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .active {
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <h1>Simulador de Ciclo de Captación - CPU</h1>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Unidad de Control</h2>
+            <div class="register">
+                <span class="register-label">UC</span>
+                <span class="register-value" id="uc">-</span>
+            </div>
+            <div class="register">
+                <span class="register-label">PC</span>
+                <span class="register-value" id="pc">0000000000000000</span>
+            </div>
+            <div class="register">
+                <span class="register-label">IR</span>
+                <span class="register-value" id="ir">0000000000000000</span>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Registradores</h2>
+            <div class="register">
+                <span class="register-label">MAR</span>
+                <span class="register-value" id="mar">000000</span>
+            </div>
+            <div class="register">
+                <span class="register-label">MBR</span>
+                <span class="register-value" id="mbr">000000</span>
+            </div>
+            <div class="register">
+                <span class="register-label">AC</span>
+                <span class="register-value" id="ac">000000</span>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Buses</h2>
+            <div class="register">
+                <span class="register-label">Bus Datos</span>
+                <span class="register-value" id="busDatos">000000</span>
+            </div>
+            <div class="register">
+                <span class="register-label">Bus Control</span>
+                <span class="register-value" id="busControl">0000</span>
+            </div>
+            <div class="register">
+                <span class="register-label">Bus Instrucciones</span>
+                <span class="register-value" id="busInst">0000000000000000</span>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>ALU</h2>
+            <div class="register">
+                <span class="register-label">Operación</span>
+                <span class="register-value" id="aluOp">-</span>
+            </div>
+            <div class="register">
+                <span class="register-label">Dir 1</span>
+                <span class="register-value" id="dir1">000000</span>
+            </div>
+            <div class="register">
+                <span class="register-label">Dir 2</span>
+                <span class="register-value" id="dir2">000000</span>
+            </div>
+        </div>
+        
+        <div class="card input-section">
+            <input type="text" id="instruccion" placeholder="Ingrese instrucción (16 bits)" maxlength="16">
+            <button onclick="validarYComenzar()">1. Fetch</button>
+            <button onclick="paso2()" id="btn2" disabled>2. PC→MAR</button>
+            <button onclick="paso3()" id="btn3" disabled>3. MAR→Bus</button>
+            <button onclick="paso4()" id="btn4" disabled>4. Mem→MBR</button>
+            <button onclick="paso5()" id="btn5" disabled>5. MBR→IR</button>
+            <button onclick="paso6()" id="btn6" disabled>6. Decode</button>
+            <button onclick="ejecutar()" class="btn-execute" id="btnExe" disabled>7. Ejecutar</button>
+            <button onclick="reset()" class="btn-reset">Reset</button>
+        </div>
+        
+        <div class="card result-area">
+            <h2>Resultado</h2>
+            <div class="result-display" id="resultado">-</div>
+        </div>
+        
+        <div class="codops">
+            <h2>Códigos de Operación</h2>
+            <div class="codops-grid">
+                <div class="codop-item"><span>0000</span> - MOVE</div>
+                <div class="codop-item"><span>0001</span> - CLEAR</div>
+                <div class="codop-item"><span>0010</span> - SET</div>
+                <div class="codop-item"><span>0011</span> - STORE</div>
+                <div class="codop-item"><span>0100</span> - ADD</div>
+                <div class="codop-item"><span>0101</span> - SUB</div>
+                <div class="codop-item"><span>0110</span> - MPY</div>
+                <div class="codop-item"><span>0111</span> - DIV</div>
+                <div class="codop-item"><span>1000</span> - NEGATE</div>
+                <div class="codop-item"><span>1001</span> - AND</div>
+                <div class="codop-item"><span>1010</span> - OR</div>
+                <div class="codop-item"><span>1011</span> - NOT</div>
+                <div class="codop-item"><span>1100</span> - COMPARE</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="message" id="message"></div>
+    
+    <script>
+        let ciclo = 0;
+        let instruccion = '';
+        let codop = '';
+        let dir1 = '';
+        let dir2 = '';
+        
+        const operaciones = {
+            '0000': 'MOVE',
+            '0001': 'CLEAR',
+            '0010': 'SET',
+            '0011': 'STORE',
+            '0100': 'ADD',
+            '0101': 'SUB',
+            '0110': 'MPY',
+            '0111': 'DIV',
+            '1000': 'NEGATE',
+            '1001': 'AND',
+            '1010': 'OR',
+            '1011': 'NOT',
+            '1100': 'COMPARE'
+        };
+        
+        function showMessage(text, isError = false) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = 'message show' + (isError ? ' error' : '');
+            setTimeout(() => msg.className = 'message', 3000);
+        }
+        
+        function validarYComenzar() {
+            instruccion = document.getElementById('instruccion').value.trim();
+            
+            if (!instruccion) {
+                showMessage('La entrada no puede ser vacía', true);
+                return;
+            }
+            if (instruccion.length !== 16) {
+                showMessage('La instrucción debe tener exactamente 16 bits', true);
+                return;
+            }
+            if (!/^[01]+$/.test(instruccion)) {
+                showMessage('Solo se permiten 0s y 1s', true);
+                return;
+            }
+            
+            codop = instruccion.substring(0, 4);
+            dir1 = instruccion.substring(4, 10);
+            dir2 = instruccion.substring(10, 16);
+            
+            document.getElementById('ir').textContent = instruccion;
+            document.getElementById('uc').textContent = 'Fetching...';
+            
+            ciclo = 1;
+            enableButtons([2]);
+            showMessage('Ciclo de captación iniciado');
+        }
+        
+        function paso2() {
+            document.getElementById('uc').textContent = '';
+            document.getElementById('pc').textContent = instruccion;
+            document.getElementById('mar').textContent = dir1;
+            document.getElementById('busInst').textContent = instruccion;
+            ciclo = 2;
+            enableButtons([3]);
+        }
+        
+        function paso3() {
+            document.getElementById('pc').textContent = '';
+            document.getElementById('busDatos').textContent = dir1;
+            document.getElementById('busControl').textContent = '0010';
+            ciclo = 3;
+            enableButtons([4]);
+        }
+        
+        function paso4() {
+            document.getElementById('busControl').textContent = '';
+            document.getElementById('mbr').textContent = dir1;
+            document.getElementById('busDatos').textContent = dir1;
+            ciclo = 4;
+            enableButtons([5]);
+        }
+        
+        function paso5() {
+            document.getElementById('mbr').textContent = '';
+            document.getElementById('ir').textContent = instruccion;
+            document.getElementById('busDatos').textContent = '';
+            ciclo = 5;
+            enableButtons([6]);
+        }
+        
+        function paso6() {
+            document.getElementById('uc').textContent = 'Decode: ' + (operaciones[codop] || 'Unknown');
+            document.getElementById('aluOp').textContent = operaciones[codop] || '-';
+            document.getElementById('dir1').textContent = dir1;
+            document.getElementById('dir2').textContent = dir2;
+            ciclo = 6;
+            enableButtons(['exe']);
+        }
+        
+        function ejecutar() {
+            let resultado = '';
+            const val1 = parseInt(dir1, 2);
+            const val2 = parseInt(dir2, 2);
+            
+            switch (codop) {
+                case '0000': // MOVE
+                    resultado = dir1;
+                    showMessage(`MOVE: ${dir1} → ${dir2}`);
+                    break;
+                case '0001': // CLEAR
+                    resultado = '000000';
+                    showMessage('CLEAR: Registros a 0');
+                    break;
+                case '0010': // SET
+                    resultado = '111111';
+                    showMessage('SET: Registros a 1');
+                    break;
+                case '0011': // STORE
+                    resultado = dir1;
+                    showMessage(`STORE: ${dir1} guardado`);
+                    break;
+                case '0100': // ADD
+                    resultado = (val1 + val2).toString(2).padStart(6, '0');
+                    showMessage(`ADD: ${val1} + ${val2} = ${parseInt(resultado, 2)}`);
+                    break;
+                case '0101': // SUB
+                    resultado = Math.abs(val1 - val2).toString(2).padStart(6, '0');
+                    showMessage(`SUB: ${val1} - ${val2} = ${parseInt(resultado, 2)}`);
+                    break;
+                case '0110': // MPY
+                    resultado = (val1 * val2).toString(2);
+                    showMessage(`MPY: ${val1} × ${val2} = ${parseInt(resultado, 2)}`);
+                    break;
+                case '0111': // DIV
+                    if (val2 === 0) {
+                        showMessage('ERROR: División por cero', true);
+                        return;
+                    }
+                    resultado = Math.floor(val1 / val2).toString(2).padStart(6, '0');
+                    showMessage(`DIV: ${val1} ÷ ${val2} = ${parseInt(resultado, 2)}`);
+                    break;
+                case '1000': // NEGATE
+                    resultado = dir1.split('').map(b => b === '0' ? '1' : '0').join('') + '-' + 
+                               dir2.split('').map(b => b === '0' ? '1' : '0').join('');
+                    showMessage('NEGATE: Bits invertidos');
+                    break;
+                case '1001': // AND
+                    resultado = '';
+                    for (let i = 0; i < 6; i++) {
+                        resultado += (dir1[i] === '1' && dir2[i] === '1') ? '1' : '0';
+                    }
+                    showMessage('AND: Operación lógica');
+                    break;
+                case '1010': // OR
+                    resultado = '';
+                    for (let i = 0; i < 6; i++) {
+                        resultado += (dir1[i] === '1' || dir2[i] === '1') ? '1' : '0';
+                    }
+                    showMessage('OR: Operación lógica');
+                    break;
+                case '1011': // NOT
+                    resultado = dir1.split('').map(b => b === '0' ? '1' : '0').join('') + '-' +
+                               dir2.split('').map(b => b === '0' ? '1' : '0').join('');
+                    showMessage('NOT: Operación lógica');
+                    break;
+                case '1100': // COMPARE
+                    resultado = dir1 === dir2 ? 'IGUALES' : 'DISTINTOS';
+                    showMessage(`COMPARE: ${resultado}`);
+                    break;
+                default:
+                    showMessage('Operación desconocida', true);
+            }
+            
+            document.getElementById('resultado').textContent = resultado;
+            document.getElementById('ac').textContent = resultado.length <= 6 ? resultado.padStart(6, '0') : resultado.substring(0, 6);
+            document.getElementById('btnExe').disabled = true;
+        }
+        
+        function enableButtons(buttons) {
+            buttons.forEach(b => {
+                if (b === 'exe') {
+                    document.getElementById('btnExe').disabled = false;
+                } else {
+                    document.getElementById('btn' + b).disabled = false;
+                }
+            });
+        }
+        
+        function reset() {
+            ciclo = 0;
+            instruccion = '';
+            codop = '';
+            dir1 = '';
+            dir2 = '';
+            
+            document.getElementById('instruccion').value = '';
+            document.getElementById('resultado').textContent = '-';
+            
+            const registers = ['uc', 'pc', 'ir', 'mar', 'mbr', 'ac', 'busDatos', 'busControl', 'busInst', 'aluOp', 'dir1', 'dir2'];
+            registers.forEach(id => {
+                const el = document.getElementById(id);
+                if (id === 'pc' || id === 'ir' || id === 'busInst') {
+                    el.textContent = '0000000000000000';
+                } else if (id === 'busControl') {
+                    el.textContent = '0000';
+                } else {
+                    el.textContent = '000000';
+                }
+            });
+            
+            for (let i = 2; i <= 6; i++) {
+                document.getElementById('btn' + i).disabled = true;
+            }
+            document.getElementById('btnExe').disabled = true;
+            
+            showMessage('Simulador reiniciado');
+        }
+    </script>
+</body>
+</html>
